@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 
 	"github.com/justinas/nosurf"
-	"github.com/thiruthanikaiarasu/udemy-go/bookings/pkg/config"
-	"github.com/thiruthanikaiarasu/udemy-go/bookings/pkg/models"
+	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/config"
+	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/models"
 )
 
 var app *config.AppConfig

@@ -6,9 +6,9 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/thiruthanikaiarasu/udemy-go/bookings/pkg/config"
-	"github.com/thiruthanikaiarasu/udemy-go/bookings/pkg/models"
-	"github.com/thiruthanikaiarasu/udemy-go/bookings/pkg/render"
+	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/config"
+	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/models"
+	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/render"
 )
 
 // Repo the repository used by the handlers

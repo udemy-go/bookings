@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/alexedwards/scs/v2"
-	"github.com/thiruthanikaiarasu/udemy-go/bookings/pkg/config"
-	"github.com/thiruthanikaiarasu/udemy-go/bookings/pkg/handlers"
-	"github.com/thiruthanikaiarasu/udemy-go/bookings/pkg/render"
+	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/config"
+	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/handlers"
+	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/render"
 )
 
 const portNumber = ":8080"
