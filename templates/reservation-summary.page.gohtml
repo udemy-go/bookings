@@ -1,6 +1,7 @@
 {{template "base" .}}
 
 {{define "content"}}
+    {{$res := index .Data "reservation"}}
     <div class="container">
         <div class="row">
             <div class="col">
@@ -8,32 +9,33 @@
 
                 <hr>
 
-                <table class="table table-striped"></table>
-                <thead></thead>
-                <tbody>
-                    <tr>
-                        <td>Name: </td>
-                        <td></td>
-                    </tr>
-                    
-                    <tr>
-                        <td>Arrival: </td>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td>Departure: </td>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td>Email: </td>
-                        <td></td>
-                    </tr>
-                    <tr>
-                        <td>Phone: </td>
-                        <td></td>
-                    </tr>
+                <table class="table table-striped">
+                    <thead></thead>
+                    <tbody>
+                        <tr>
+                            <td>Name: </td>
+                            <td>{{$res.FirstName}}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td>Arrival: </td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>Departure: </td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>Email: </td>
+                            <td>{{$res.Email}}</td>
+                        </tr>
+                        <tr>
+                            <td>Phone: </td>
+                            <td>{{$res.Phone}}</td>
+                        </tr>
 
-                </tbody>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
