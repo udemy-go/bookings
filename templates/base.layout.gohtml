@@ -113,6 +113,14 @@
             })
         }
 
+        {{with .Error}}
+        notify("{{.}}", "error")
+        {{end}}
+
+        {{with .Warning}}
+        notify("{{.}}", "error")
+        {{end}}
+
         function notifyModal(title, text, icon, confirmationButtonText) {
             Swal.fire({
                 title: title,
