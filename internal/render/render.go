@@ -2,6 +2,8 @@ package render
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -12,7 +14,10 @@ import (
 	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/models"
 )
 
+var functions = template.FuncMap{}
+
 var app *config.AppConfig
+var pathToTemplates = "./templates"
 
 func NewTemplate(a *config.AppConfig) {
 	app = a
@@ -27,7 +32,7 @@ func AddDefaultData(td *models.TemplateData, r *http.Request) *models.TemplateDa
 }
 
 // RenderedTemplate renders template using html/template
-func RenderTemplate(w http.ResponseWriter, r *http.Request, tmpl string, td *models.TemplateData) {
+func RenderTemplate(w http.ResponseWriter, r *http.Request, tmpl string, td *models.TemplateData) error {
 	var tc map[string]*template.Template
 
 	// We say if UseCache is false call CreateTemplateCache()(means we're in production so create template cache for every request), 
@@ -42,7 +47,8 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, tmpl string, td *mod
 	// get requested from template cache
 	t, ok := tc[tmpl]    // checking the given tmpl is there in the template cache
 	if !ok {
-		log.Fatal("Could not get template from template cache")
+		// log.Fatal("Could not get template from template cache")
+		return errors.New("could not get template from template cache")
 	}
 
 	buf := new(bytes.Buffer) // this is an optional line, it is for finding error 
@@ -56,16 +62,19 @@ func RenderTemplate(w http.ResponseWriter, r *http.Request, tmpl string, td *mod
 	_, err := buf.WriteTo(w)
 	if err != nil {
 		log.Println(err)
+		return err
 	}
-	
+
+	return nil 	
 } 
 
+// CreateTemplateCache creates a template cache as a map 
 func CreateTemplateCache() (map[string]*template.Template, error) {
 	myCache := map[string]*template.Template{} // first you the parse the template file and then the layout file 
 	
 
 	// get all the files names *.page.gohtml from ./templates 
-	pages, err := filepath.Glob("./templates/*.page.gohtml")
+	pages, err := filepath.Glob(fmt.Sprintf("%s/*.page.gohtml", pathToTemplates))
 	if err != nil {
 		return myCache, err
 	}
@@ -75,18 +84,18 @@ func CreateTemplateCache() (map[string]*template.Template, error) {
 		// Base return the last element of the path, that is the file name here
 		name := filepath.Base(page)
 		// ts (template set) stores the template called name, parsed by the file page
-		ts, err := template.New(name).ParseFiles(page)
+		ts, err := template.New(name).Funcs(functions).ParseFiles(page)
 		if err != nil {
 			return myCache, err
 		}
 
-		matches, err := filepath.Glob("./templates/*.layout.gohtml")
+		matches, err := filepath.Glob(fmt.Sprintf("%s/*.layout.gohtml", pathToTemplates))
 		if err != nil {
 			return myCache, err
 		}
 
 		if len(matches) > 0 {
-			ts, err = ts.ParseGlob("./templates/*.layout.gohtml")
+			ts, err = ts.ParseGlob(fmt.Sprintf("%s/*.layout.gohtml", pathToTemplates))
 			if err != nil {
 				return myCache, err
 			}
