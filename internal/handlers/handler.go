@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-
 	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/config"
 	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/forms"
+	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/helpers"
 	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/models"
 	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/render"
 )
@@ -34,8 +34,6 @@ func NewHandler(r *Repository) {
 
 // Home is the home page handler
 func (m *Repository) Home(w http.ResponseWriter, r *http.Request) {
-	remoteIP := r.RemoteAddr
-	m.App.Session.Put(r.Context(), "remote_ip", remoteIP)
 
 	render.RenderTemplate(w, r, "home.page.gohtml", &models.TemplateData{})
 }
@@ -43,15 +41,7 @@ func (m *Repository) Home(w http.ResponseWriter, r *http.Request) {
 // About is the about page handler
 func (m *Repository) About(w http.ResponseWriter, r *http.Request) {
 
-	stringMap := make(map[string]string)
-	stringMap["test"] = "Hello, again"
-
-	remoteIp := m.App.Session.GetString(r.Context(), "remote_ip")
-	stringMap["remote_ip"] = remoteIp
-
-	render.RenderTemplate(w, r, "about.page.gohtml", &models.TemplateData{
-		StringMap: stringMap,
-	})
+	render.RenderTemplate(w, r, "about.page.gohtml", &models.TemplateData{})
 }
 
 // Reservation renders the make a reservation page and display from
@@ -70,7 +60,7 @@ func (m *Repository) Reservation(w http.ResponseWriter, r *http.Request) {
 func (m *Repository) PostReservation(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
-		log.Println(err)
+		helpers.ServerError(w, err)
 		return
 	}
 
@@ -141,7 +131,7 @@ func (m *Repository) AvailabilityJSON(w http.ResponseWriter, r *http.Request) {
 
 	out, err := json.MarshalIndent(resp, "", "    ")
 	if err != nil {
-		log.Println(err)
+		helpers.ServerError(w, err)
 	}
 
 	log.Println(string(out))
@@ -157,7 +147,7 @@ func (m *Repository) Contact(w http.ResponseWriter, r *http.Request) {
 func (m *Repository) ReservationSummary(w http.ResponseWriter, r *http.Request) {
 	reservation, ok := m.App.Session.Get(r.Context(), "reservation").(models.Reservation) // type assert
 	if !ok {
-		log.Println("cannot get item form session")
+		m.App.ErrorLog.Println("can't get error from session")
 		m.App.Session.Put(r.Context(), "error", "Can't get reservation from session")
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
