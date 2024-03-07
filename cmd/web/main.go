@@ -10,6 +10,7 @@ import (
 
 	"github.com/alexedwards/scs/v2"
 	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/config"
+	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/driver"
 	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/handlers"
 	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/helpers"
 	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/models"
@@ -17,23 +18,25 @@ import (
 )
 
 const portNumber = ":8080"
+
 var app config.AppConfig
 var session *scs.SessionManager
 var infoLog *log.Logger
 var errorLog *log.Logger
 
-// main is the main application function 
+// main is the main application function
 func main() {
 
-	err := run()
+	db, err := run()
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+	defer db.SQL.Close()
+
 	fmt.Printf("Starting application at %s\n", portNumber)
 
-	srv := &http.Server {
-		Addr: portNumber,
+	srv := &http.Server{
+		Addr:    portNumber,
 		Handler: routes(&app),
 	}
 
@@ -41,47 +44,55 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 }
 
-func run() error {
+func run() (*driver.DB, error) {
 
-	//What am I going to to put in the session 
+	//What am I going to to put in the session
 	gob.Register(models.Reservation{})
+	gob.Register(models.User{})
+	gob.Register(models.Room{})
+	gob.Register(models.Restriction{})
 
-	// change this to true when in production 
+	// change this to true when in production
 	app.InProduction = false
 
 	infoLog = log.New(os.Stdout, "info\t", log.Ldate|log.Ltime)
 	app.InfoLog = infoLog
 
 	errorLog = log.New(os.Stdout, "Error\t", log.Ldate|log.Ltime|log.Lshortfile) // Lshortfile gives about the information of the error
-	app.ErrorLog = errorLog 
+	app.ErrorLog = errorLog
 
 	session = scs.New()
-	session.Lifetime = 24 * time.Hour 
-	session.Cookie.Persist = true 
+	session.Lifetime = 24 * time.Hour
+	session.Cookie.Persist = true
 	session.Cookie.SameSite = http.SameSiteLaxMode
 	session.Cookie.Secure = app.InProduction
 
 	app.Session = session
 
+	//connect to database
+	log.Println("Connecting to database...")
+	db, err := driver.ConnectSQL("host=localhost port=5432 dbname=bookings user=postgres password=root")
+	if err != nil {
+		log.Fatal("Cannot connect to database, Dying..")
+	}
+	log.Println("Connected to database!")
+
 	tc, err := render.CreateTemplateCache()
 	if err != nil {
 		log.Fatal("cannot create template cache")
-		return err
+		return nil, err
 	}
 
 	app.TemplateCache = tc
 	app.UseCache = false
 
-	
-
-	repo := handlers.NewRepo(&app)
+	repo := handlers.NewRepo(&app, db)
 	handlers.NewHandler(repo)
-	render.NewTemplate(&app)
+	render.NewRenderer(&app)
 	helpers.NewHelper(&app)
 
-
-	return nil 
+	return db, nil
 }
