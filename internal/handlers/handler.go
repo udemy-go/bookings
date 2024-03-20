@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -105,13 +106,13 @@ func (m *Repository) PostReservation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// err := r.ParseForm()
-	// if err != nil {
-	// 	m.App.Session.Put(r.Context(), "error", "can't pase form")
-	// 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
-	// 	return
-	// }
-    
+	err := r.ParseForm()
+	if err != nil {
+		m.App.Session.Put(r.Context(), "error", "can't pase form")
+		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		return
+	}
+     
 	reservation.FirstName = r.Form.Get("first_name")
 	reservation.LastName = r.Form.Get("last_name")
 	reservation.Phone = r.Form.Get("phone")
@@ -203,13 +204,15 @@ func (m *Repository) PostAvailability(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
 	}
-
+	fmt.Printf("start : %s, end : %s", start, end)
+	fmt.Printf("start : %T, end : %T", startDate.Format("2006-01-02"), endDate.Format("2006-01-02"))
 	rooms, err := m.DB.SearchAvailabilityForAllRooms(startDate, endDate)
 	if err != nil {
 		m.App.Session.Put(r.Context(), "error", "can't get availability for rooms")
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
 	}
+	fmt.Printf("post availability : %T", rooms)
 
 	for _, i := range rooms {
 		m.App.InfoLog.Println("Room:", i.ID, i.RoomName)
@@ -222,15 +225,16 @@ func (m *Repository) PostAvailability(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	
+	data := make(map[string]interface{})
+	data["rooms"] = rooms
+
 	res := models.Reservation{
 		StartDate: startDate,
 		EndDate:   endDate,
 	}
 
 	m.App.Session.Put(r.Context(), "reservation", res)
-
-	data := make(map[string]interface{})
-	data["rooms"] = rooms
 
 	render.Template(w, r, "choose-room.page.gohtml", &models.TemplateData{
 		Data: data,

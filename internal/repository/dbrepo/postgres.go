@@ -2,6 +2,7 @@ package dbrepo
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/thiruthanikaiarasu/udemy-go/bookings/internal/models"
@@ -72,17 +73,20 @@ func (m *postgresDBRepo) SearchAvailabilityByDatesByRoomID(start, end time.Time,
 	var numRows int
 
 	query := `
-		select
-			count(id)
-		from 
+		SELECT
+			COUNT(id)
+		FROM 
 			rooms_restrictions
-		where 
-			room_id = $1 and 
-			$2 < end_date and $3 > start_date;
+		WHERE 
+			room_id = $1 AND 
+			$2 BETWEEN start_date AND end_date AND 
+			$3 BETWEEN start_date AND end_date;
 `
 	
 	row := m.DB.QueryRowContext(ctx, query, roomId, start, end)
 	err := row.Scan(&numRows)
+	fmt.Printf("Start date : %T end date : %T ", start, end)
+	fmt.Printf("Rooms available : %d", numRows)
 	if err != nil {
 		return false, err
 	}
@@ -98,12 +102,20 @@ func (m *postgresDBRepo) SearchAvailabilityForAllRooms(start, end time.Time) ([]
 	var rooms []models.Room
 
 	query := `
-		select 
+		SELECT 
 			r.id, r.room_name
-		from 
-			rooms r 
-		where r.id not in 
-		(select room_id from rooms_restrictions rr where $1 < rr.end_date and $2 > rr.start_date)
+		FROM 
+			rooms r
+		WHERE r.id not in 
+		(SELECT 
+			room_id 
+		FROM 
+			rooms_restrictions rr 
+		WHERE 
+			$1 BETWEEN rr.start_date AND rr.end_date AND 
+			$2 BETWEEN rr.start_date AND rr.end_date AND 
+			rr.room_id = r.id)
+
 `
 	rows, err := m.DB.QueryContext(ctx, query, start, end)
 	if err != nil {
@@ -119,7 +131,7 @@ func (m *postgresDBRepo) SearchAvailabilityForAllRooms(start, end time.Time) ([]
 		if err != nil {
 			return rooms, err
 		}
-
+		fmt.Printf("Rooms available : %T", rooms)
 		rooms = append(rooms, room)
 	}
 
