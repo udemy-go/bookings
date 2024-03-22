@@ -66,7 +66,7 @@ func (m *Repository) Reservation(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		m.App.Session.Put(r.Context(), "error", "can't get reservation from session")
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
-		return 
+		return
 	}
 
 	room, err := m.DB.GetRoomById(res.RoomID)
@@ -112,7 +112,7 @@ func (m *Repository) PostReservation(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
 	}
-     
+
 	reservation.FirstName = r.Form.Get("first_name")
 	reservation.LastName = r.Form.Get("last_name")
 	reservation.Phone = r.Form.Get("phone")
@@ -157,6 +157,36 @@ func (m *Repository) PostReservation(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		return
 	}
+
+	htmlMessage := fmt.Sprintf(`
+		<strong>Reservation Confirmation</strong><br>
+		Dear %s,<br>
+		This is confirm your reservation %s to %s 
+	`, reservation.FirstName, reservation.StartDate.Format("2006-01-02"), reservation.EndDate.Format("2006-01-02"))
+
+	// send notification to guest  
+	msg := models.MailData{
+		From: "me@here.com",
+		To: reservation.Email,
+		Subject: "Reservation Confirmation",
+		Content: htmlMessage,
+	}
+	m.App.MailChan <- msg
+
+	htmlMessage = fmt.Sprintf(`
+		<strong>Reservation Notification</strong><br>
+		The reservation has been made for %s room, from %s to %s.
+	`, reservation.Room.RoomName, reservation.StartDate.Format("2006-01-02"), reservation.EndDate.Format("2006-01-02"))
+
+	// send notification to owner 
+	msg = models.MailData{
+		From: "me@here.com",
+		To: "owner@bookings.com",
+		Subject: "Reservation Notification",
+		Content: htmlMessage,
+	}
+
+	m.App.MailChan <- msg 
 
 	m.App.Session.Put(r.Context(), "reservation", reservation) // storing the form content in the session to get it in the reservation-summary page
 
@@ -225,7 +255,6 @@ func (m *Repository) PostAvailability(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	
 	data := make(map[string]interface{})
 	data["rooms"] = rooms
 
@@ -252,75 +281,74 @@ type jsonResponse struct {
 
 // AvailabilityJSON handles the request and sends back the JSON
 func (m *Repository) AvailabilityJSON(w http.ResponseWriter, r *http.Request) {
-    // need to parse request body
-    err := r.ParseForm()
-    if err != nil {
-        // can't parse form, so return appropriate json
-        resp := jsonResponse{
-            Ok:      false,
-            Message: "Internal server error",
-        }
+	// need to parse request body
+	err := r.ParseForm()
+	if err != nil {
+		// can't parse form, so return appropriate json
+		resp := jsonResponse{
+			Ok:      false,
+			Message: "Internal server error",
+		}
 
-        out, _ := json.MarshalIndent(resp, "", "     ")
-        w.Header().Set("Content-Type", "application/json")
-        w.Write(out)
-        return
-    }
+		out, _ := json.MarshalIndent(resp, "", "     ")
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(out)
+		return
+	}
 
-    sd := r.Form.Get("start")
-    ed := r.Form.Get("end")
+	sd := r.Form.Get("start")
+	ed := r.Form.Get("end")
 
-    layout := "2006-01-02"
-    startDate, _ := time.Parse(layout, sd)
-    endDate, _ := time.Parse(layout, ed)
-    roomId, err := strconv.Atoi(r.Form.Get("room_id"))
+	layout := "2006-01-02"
+	startDate, _ := time.Parse(layout, sd)
+	endDate, _ := time.Parse(layout, ed)
+	roomId, err := strconv.Atoi(r.Form.Get("room_id"))
 
-    if err != nil {
-        // invalid room ID, so return appropriate JSON
-        resp := jsonResponse{
-            Ok:      false,
-            Message: "Invalid room ID",
-        }
+	if err != nil {
+		// invalid room ID, so return appropriate JSON
+		resp := jsonResponse{
+			Ok:      false,
+			Message: "Invalid room ID",
+		}
 
-        out, _ := json.MarshalIndent(resp, "", "     ")
-        w.Header().Set("Content-Type", "application/json")
-        w.Write(out)
-        return
-    }
+		out, _ := json.MarshalIndent(resp, "", "     ")
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(out)
+		return
+	}
 
-    available, err := m.DB.SearchAvailabilityByDatesByRoomID(startDate, endDate, roomId)
-    if err != nil {
-        // got a database error, so return appropriate json
-        resp := jsonResponse{
-            Ok:      false,
-            Message: "Error querying database",
-        }
+	available, err := m.DB.SearchAvailabilityByDatesByRoomID(startDate, endDate, roomId)
+	if err != nil {
+		// got a database error, so return appropriate json
+		resp := jsonResponse{
+			Ok:      false,
+			Message: "Error querying database",
+		}
 
-        out, _ := json.MarshalIndent(resp, "", "     ")
-        w.Header().Set("Content-Type", "application/json")
-        w.Write(out)
-        return
-    }
+		out, _ := json.MarshalIndent(resp, "", "     ")
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(out)
+		return
+	}
 
-    resp := jsonResponse{
-        Ok:        available, // true if available, false if not
-        Message:   "",
-        StartDate: sd,
-        EndDate:   ed,
-        RoomID:    strconv.Itoa(roomId),
-    }
+	resp := jsonResponse{
+		Ok:        available, // true if available, false if not
+		Message:   "",
+		StartDate: sd,
+		EndDate:   ed,
+		RoomID:    strconv.Itoa(roomId),
+	}
 
-    out, err := json.MarshalIndent(resp, "", "    ")
-    if err != nil {
-        helpers.ServerError(w, err)
-        return
-    }
+	out, err := json.MarshalIndent(resp, "", "    ")
+	if err != nil {
+		helpers.ServerError(w, err)
+		return
+	}
 
-    log.Println(string(out))
-    w.Header().Set("Content-Type", "application/json")
-    w.Write(out)
+	log.Println(string(out))
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(out)
 }
-
 
 // Contact renders the contact page
 func (m *Repository) Contact(w http.ResponseWriter, r *http.Request) {
